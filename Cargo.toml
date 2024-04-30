@@ -1,0 +1,30 @@
+[package]
+name = "xmlifyme"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+quick-xml = { version = "0.31.0", features = ["async-tokio", "serialize"] }
+serde = { version = "1.0.199", features = ["derive"] }
+serde_json = "1.0.116"
+# walkdir = "2.5.0"
+# tokio = { version = "1.37.0", features = ["full"] }
+
+[profile.dev.package."*"]
+opt-level = 3
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1
+codegen-units = 256
+incremental = true
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+debug = "none"
+strip = "symbols"
+debug-assertions = false
+lto = "fat"
+panic = "unwind"
+incremental = true
