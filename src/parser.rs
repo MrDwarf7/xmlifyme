@@ -42,9 +42,10 @@ impl Args {
 }
 
 pub fn default_help_text() -> &'static str {
-    "Usage: xmlifyme [xml|plain|help]
-    info: input file should be in '.\\data\\' folder,
-        output will be in '.\\output\\' folder
+    "\nUsage: xmlifyme [xml|plain|help]
+info:
+    input file should be in '.\\data\\' folder,
+    output will be in '.\\output\\' folder\n
     xml: Output as xml
     plain: Output as plain text in a .xml file
     help: Display this help text"

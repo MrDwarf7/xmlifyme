@@ -28,6 +28,13 @@ impl JsonFile {
         })
     }
 
+    pub fn set_content(&mut self) -> Result<Self> {
+        let content = JsonFile::from_file(&self.location)?;
+        self.borrow_mut().content = content.content;
+
+        Ok(self.clone())
+    }
+
     pub fn from_file<P: AsRef<Path>>(location: P) -> Result<Self> {
         let file = std::fs::File::open(location.as_ref())?;
         let read = BufReader::new(file);
@@ -38,13 +45,6 @@ impl JsonFile {
             location: location.as_ref().to_path_buf(),
             content,
         })
-    }
-
-    pub fn set_content(&mut self) -> Result<Self> {
-        let content = JsonFile::from_file(&self.location)?;
-        self.borrow_mut().content = content.content;
-
-        Ok(self.clone())
     }
 }
 // endregion:	--- Setup
@@ -148,12 +148,21 @@ impl JsonFile {
 
 // region:		--- Private Helpers
 impl JsonFile {
-    fn with_extension<P: AsRef<Path>>(path: P, extension: &str) -> PathBuf {
-        let mut path = path.as_ref().to_path_buf();
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-        let file_name = file_name.to_string() + extension;
-        path.set_file_name(file_name);
-        path
+    fn with_extension<P: AsRef<Path>>(file_name: P, extension: &str) -> PathBuf {
+        let mut str_lossy_file_name = file_name.as_ref().to_string_lossy();
+
+        // Fix the forward slashes in the (process - which is also the name of the generated file)
+        str_lossy_file_name.to_mut().push_str(extension);
+        str_lossy_file_name = str_lossy_file_name.replace('/', "_").into();
+
+        let new_file_name = str_lossy_file_name
+            .as_ref()
+            .parse::<String>()
+            .unwrap()
+            .parse::<PathBuf>()
+            .unwrap();
+
+        new_file_name
     }
 }
 // endregion:	--- Private Helpers
