@@ -1,14 +1,27 @@
 // region:		--- use
 use crate::{prelude::*, statistics::Statistics, Result};
 use quick_xml::events::BytesStart;
-use std::io::{BufWriter, Write};
-use std::{io::BufReader, path::Path};
+use std::{
+    io::{BufReader, BufWriter, Read, Write},
+    path::Path,
+};
 // endregion:	--- use
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessEntry {
     pub name: String,
     pub processxml: String,
+}
+
+impl From<String> for ProcessEntry {
+    fn from(content: String) -> Self {
+        let content: ProcessEntry = serde_json::from_str(&content).unwrap();
+
+        ProcessEntry {
+            name: content.name,
+            processxml: content.processxml,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -31,9 +44,14 @@ impl JsonFile {
     pub fn set_content(&mut self) -> Result<Self> {
         let location = &self.location;
         let file = std::fs::File::open(location)?;
-        let read = BufReader::new(file);
+        let mut read = BufReader::new(file);
 
-        let content: Vec<ProcessEntry> = serde_json::from_reader(read)?;
+        let mut c = Vec::new();
+        read.read_to_end(&mut c)?;
+
+        let pattern = r#"\\"#;
+        let content = String::from_utf8_lossy(&c).replace(pattern, "");
+        let content: Vec<ProcessEntry> = serde_json::from_str(&content).unwrap();
 
         let location = location.to_path_buf();
 
@@ -56,8 +74,7 @@ impl JsonFile {
 
         for entry in self.content.iter() {
             // region:		--- setup on loop
-            let file_name = entry.name.clone();
-            let file_name = Self::with_extension(file_name, extension);
+            let file_name = Self::with_extension(entry.name.clone(), extension);
             let entry_contents = entry.processxml.clone();
             let out_file_name = output_dir.as_ref().join(&file_name);
             // endregion:	--- setup on loop
@@ -65,7 +82,7 @@ impl JsonFile {
             // region:		--- Output
             let mut buffer = Vec::new();
             let mut writer = quick_xml::Writer::new_with_indent(&mut buffer, b' ', 2);
-            let start = BytesStart::new("process_data");
+            let start = BytesStart::new("");
             let end = start.to_end().clone();
 
             let _ = writer.write_event(quick_xml::events::Event::Start(start.clone()));
@@ -103,8 +120,7 @@ impl JsonFile {
 
         self.content.iter().for_each(|entry| {
             // region:		--- setup on loop
-            let file_name = entry.name.clone();
-            let file_name = Self::with_extension(file_name, extension);
+            let file_name = Self::with_extension(entry.name.clone(), extension);
             let entry_contents = entry.processxml.clone();
             let out_file_name = output_dir.as_ref().join(&file_name);
             // endregion:	--- setup on loop
