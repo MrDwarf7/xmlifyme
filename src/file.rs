@@ -2,7 +2,7 @@
 use crate::{prelude::*, statistics::Statistics, Result};
 use quick_xml::events::BytesStart;
 use std::io::{BufWriter, Write};
-use std::{borrow::BorrowMut, io::BufReader, path::Path};
+use std::{io::BufReader, path::Path};
 // endregion:	--- use
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -29,73 +29,20 @@ impl JsonFile {
     }
 
     pub fn set_content(&mut self) -> Result<Self> {
-        let content = JsonFile::from_file(&self.location)?;
-        self.borrow_mut().content = content.content;
-
-        Ok(self.clone())
-    }
-
-    pub fn from_file<P: AsRef<Path>>(location: P) -> Result<Self> {
-        let file = std::fs::File::open(location.as_ref())?;
+        let location = &self.location;
+        let file = std::fs::File::open(location)?;
         let read = BufReader::new(file);
 
         let content: Vec<ProcessEntry> = serde_json::from_reader(read)?;
 
-        Ok(JsonFile {
-            location: location.as_ref().to_path_buf(),
-            content,
-        })
+        let location = location.to_path_buf();
+
+        Ok(JsonFile { location, content })
     }
 }
 // endregion:	--- Setup
 
 impl JsonFile {
-    pub fn to_file<P: AsRef<Path>>(&self, location: P) -> Result<()> {
-        let file = std::fs::File::create(location)?;
-        let write = BufWriter::new(file);
-        serde_json::to_writer(write, &self.content)?;
-
-        Ok(())
-    }
-
-    pub fn write_as_plain<P: AsRef<Path>>(
-        &self,
-        output_dir: P,
-        extension: &str,
-    ) -> Result<Statistics> {
-        if !output_dir.as_ref().exists() {
-            std::fs::create_dir_all(output_dir.as_ref())?;
-        }
-
-        let mut stats = Statistics::default();
-
-        self.content.iter().for_each(|entry| {
-            println!("{:?}", entry.name);
-            // region:		--- setup on loop
-            let file_name = entry.name.clone();
-            let file_name = Self::with_extension(file_name, extension);
-            let entry_contents = entry.processxml.clone();
-            let out_file_name = output_dir.as_ref().join(&file_name);
-            // endregion:	--- setup on loop
-
-            // region:		--- Output
-            let out_file = std::fs::File::create(out_file_name).unwrap();
-            let buf_writer = BufWriter::new(out_file);
-            serde_json::to_writer(buf_writer, &entry_contents).unwrap();
-            // endregion:	--- Output
-
-            // region:		--- Stats
-            stats.wrap_input(
-                entry_contents.chars().count(),
-                entry_contents.len(),
-                output_dir.as_ref().to_path_buf(),
-                file_name.to_str().unwrap().to_string(),
-            )
-            // endregion:	--- Stats
-        });
-        Ok(stats)
-    }
-
     pub fn write_as_xml<P: AsRef<Path>>(
         &self,
         output_dir: P,
@@ -108,8 +55,6 @@ impl JsonFile {
         let mut stats = Statistics::default();
 
         for entry in self.content.iter() {
-            println!("{:?}", entry.name);
-
             // region:		--- setup on loop
             let file_name = entry.name.clone();
             let file_name = Self::with_extension(file_name, extension);
@@ -142,6 +87,43 @@ impl JsonFile {
             );
             // endregion:	--- Stats
         }
+        Ok(stats)
+    }
+
+    pub fn write_as_plain<P: AsRef<Path>>(
+        &self,
+        output_dir: P,
+        extension: &str,
+    ) -> Result<Statistics> {
+        if !output_dir.as_ref().exists() {
+            std::fs::create_dir_all(output_dir.as_ref())?;
+        }
+
+        let mut stats = Statistics::default();
+
+        self.content.iter().for_each(|entry| {
+            // region:		--- setup on loop
+            let file_name = entry.name.clone();
+            let file_name = Self::with_extension(file_name, extension);
+            let entry_contents = entry.processxml.clone();
+            let out_file_name = output_dir.as_ref().join(&file_name);
+            // endregion:	--- setup on loop
+
+            // region:		--- Output
+            let out_file = std::fs::File::create(out_file_name).unwrap();
+            let buf_writer = BufWriter::new(out_file);
+            serde_json::to_writer(buf_writer, &entry_contents).unwrap();
+            // endregion:	--- Output
+
+            // region:		--- Stats
+            stats.wrap_input(
+                entry_contents.chars().count(),
+                entry_contents.len(),
+                output_dir.as_ref().to_path_buf(),
+                file_name.to_str().unwrap().to_string(),
+            )
+            // endregion:	--- Stats
+        });
         Ok(stats)
     }
 }

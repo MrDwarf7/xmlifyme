@@ -10,7 +10,7 @@ pub struct Statistics {
     pub char_count: usize,
     pub array_length: usize,
     pub output_dir: PathBuf,
-    pub output_filename: String,
+    pub output_filename: Vec<String>,
 }
 
 // region:		--- Setup
@@ -26,7 +26,7 @@ impl Statistics {
             char_count: 0,
             array_length: 0,
             output_dir: PathBuf::new(),
-            output_filename: String::new(),
+            output_filename: Vec::new(),
         }
     }
 }
@@ -56,7 +56,7 @@ impl Statistics {
             results.0,
             results.1,
             results.2.to_path_buf(),
-            results.3.to_string(),
+            results.3.clone(),
         )
     }
 
@@ -91,7 +91,7 @@ impl Statistics {
     }
 
     pub fn set_output_filename(&mut self, output_filename: String) {
-        self.output_filename = output_filename;
+        self.output_filename.push(output_filename)
     }
 }
 // endregion:	--- Setters
@@ -110,7 +110,7 @@ impl Statistics {
         &self.output_dir
     }
 
-    pub fn get_output_filename(&self) -> &str {
+    pub fn get_output_filename(&self) -> &Vec<String> {
         &self.output_filename
     }
 }
@@ -145,7 +145,7 @@ pub struct StatsOutput {
     char_count: usize,
     array_length: usize,
     pub output_dir: PathBuf,
-    pub output_filename: String,
+    pub output_filename: Vec<String>,
 }
 
 impl StatsOutput {
@@ -153,7 +153,7 @@ impl StatsOutput {
         char_count: usize,
         array_length: usize,
         output_dir: PathBuf,
-        output_filename: String,
+        output_filename: Vec<String>,
     ) -> Self {
         StatsOutput {
             char_count,
@@ -164,13 +164,25 @@ impl StatsOutput {
     }
 }
 
+impl StatsOutput {
+    fn display_output_filename(&self) -> String {
+        let mut output = String::new();
+        for name in &self.output_filename {
+            output.push('\t');
+            output.push_str(name);
+            output.push('\n');
+        }
+        output
+    }
+}
+
 // region:		--- Boilerplate
 impl Display for StatsOutput {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "StatsOutput:\n char_count: {},\n array_length: {},\n output_dir: {},\n output_filename: {}\n",
-            self.char_count, self.array_length, self.output_dir.to_str().unwrap(), self.output_filename
+            "StatsOutput:\n char_count: {}\n array_length: {}\n output_dir: {}\n output_filename:\n {}",
+            self.char_count, self.array_length, self.output_dir.to_str().unwrap(), self.display_output_filename()
         )
     }
 }
